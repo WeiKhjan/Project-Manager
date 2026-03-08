@@ -1,0 +1,37 @@
+# Client engagement data (confidential)
+Clients/
+
+# Generated outputs
+*.xlsx
+*.pdf
+*.docx
+*.doc
+*.zip
+
+# Gmail OAuth credentials
+.claude/gmail/
+
+# Claude settings
+.claude/settings.local.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# OS artifacts
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Manager Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+/* ================================================================
+   CSS RESET & BASE
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --nav-bg: #1e293b;
+    --nav-text: #94a3b8;
+    --nav-active: #f8fafc;
+    --nav-hover-bg: #334155;
+    --primary: #3b82f6;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #06b6d4;
+    --purple: #8b5cf6;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --body-bg: #f1f5f9;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --nav-width: 320px;
+    --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--body-bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ================================================================
+   LAYOUT — Split Panel
+   ================================================================ */
+.app-container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ================================================================
+   SIDEBAR (Left Nav)
+   ================================================================ */
+.sidebar {
+    width: var(--nav-width);
+    min-width: var(--nav-width);
+    background: var(--nav-bg);
+    color: var(--nav-text);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--nav-active);
+    letter-spacing: -0.02em;
+}
+
+.sidebar-header .subtitle {
+    font-size: 12px;
+    color: var(--nav-text);
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.sidebar-search {
+    padding: 12px 16px;
+}
+
+.sidebar-search input {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--nav-active);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.sidebar-search input::placeholder { color: var(--nav-text); opacity: 0.6; }
+.sidebar-search input:focus { border-color: var(--primary); }
+
+.sidebar-filters {
+    padding: 0 16px 12px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--nav-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.filter-btn:hover { background: rgba(255,255,255,0.08); color: var(--nav-active); }
+.filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.sidebar-clients {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+}
+
+.sidebar-clients::-webkit-scrollbar { width: 4px; }
+.sidebar-clients::-webkit-scrollbar-track { background: transparent; }
+.sidebar-clients::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+.client-nav-item {
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+}
+
+.client-nav-item:hover { background: var(--nav-hover-bg); }
+.client-nav-item.active { background: var(--primary); color: #fff; }
+
+.client-nav-item .client-nav-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--nav-active);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.client-nav-item.active .client-nav-name { color: #fff; }
+
+.client-nav-item .client-nav-meta {
+    font-size: 11px;
+    color: var(--nav-text);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.client-nav-item.active .client-nav-meta { color: rgba(255,255,255,0.8); }
+
+.client-nav-services {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.service-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.service-dot.audit { background: var(--primary); }
+.service-dot.tax { background: var(--success); }
+.service-dot.compilation { background: var(--purple); }
+
+.sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.btn-refresh {
+    width: 100%;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    color: var(--nav-active);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-refresh:hover { background: rgba(255,255,255,0.12); }
+.btn-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-refresh .spinner { display: none; }
+.btn-refresh.loading .spinner { display: inline-block; animation: spin 1s linear infinite; }
+.btn-refresh.loading .btn-text { display: none; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.sidebar-status {
+    padding: 8px 16px 12px;
+    font-size: 11px;
+    color: var(--nav-text);
+    opacity: 0.6;
+    text-align: center;
+}
+
+/* ================================================================
+   MAIN CONTENT
+   ================================================================ */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+}
+
+.content::-webkit-scrollbar { width: 8px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+/* ================================================================
+   PORTFOLIO VIEW
+   ================================================================ */
+.view-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    letter-spacing: -0.02em;
+}
+
+/* KPI Row */
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.kpi-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--card-border);
+    border-left: 4px solid var(--primary);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s;
+}
+
+.kpi-card:hover { box-shadow: var(--shadow-md); }
+.kpi-card.blue { border-left-color: var(--primary); }
+.kpi-card.red { border-left-color: var(--danger); }
+.kpi-card.amber { border-left-color: var(--warning); }
+.kpi-card.teal { border-left-color: var(--info); }
+
+.kpi-card .kpi-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.kpi-card .kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.kpi-card .kpi-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+/* Client Grid */
+.section-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.client-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.client-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--card-border);
+    border-left: 5px solid var(--success);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.client-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.client-card.status-red { border-left-color: var(--danger); }
+.client-card.status-amber { border-left-color: var(--warning); }
+.client-card.status-green { border-left-color: var(--success); }
+
+.client-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.client-card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    flex: 1;
+    line-height: 1.3;
+}
+
+.client-card-progress-badge {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+.client-card-services {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.service-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.service-pill.audit { background: rgba(59,130,246,0.12); color: var(--primary); }
+.service-pill.tax { background: rgba(34,197,94,0.12); color: #16a34a; }
+.service-pill.compilation { background: rgba(139,92,246,0.12); color: var(--purple); }
+
+.service-progress-list {
+    margin-bottom: 12px;
+}
+
+.service-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.service-progress-label {
+    width: 80px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: capitalize;
+}
+
+.progress-bar-container {
+    flex: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+}
+
+.progress-bar-fill.audit { background: var(--primary); }
+.progress-bar-fill.tax { background: var(--success); }
+.progress-bar-fill.compilation { background: var(--purple); }
+
+.service-progress-pct {
+    width: 36px;
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+.client-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--card-border);
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.pbc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+}
+
+.pbc-badge.has-outstanding { color: var(--danger); }
+
+.deadline-badge {
+    font-weight: 500;
+}
+
+.deadline-badge.urgent { color: var(--danger); font-weight: 600; }
+.deadline-badge.soon { color: var(--warning); }
+
+/* Deadlines Section */
+.deadlines-section {
+    margin-top: 8px;
+}
+
+.deadline-list {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.deadline-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--card-border);
+    gap: 16px;
+    transition: background 0.15s;
+}
+
+.deadline-item:last-child { border-bottom: none; }
+.deadline-item:hover { background: #f8fafc; }
+.deadline-item.overdue { background: rgba(239,68,68,0.04); }
+
+.deadline-date {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    min-width: 100px;
+}
+
+.deadline-days {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    min-width: 72px;
+    text-align: center;
+}
+
+.deadline-days.urgent { background: rgba(239,68,68,0.1); color: var(--danger); }
+.deadline-days.soon { background: rgba(245,158,11,0.1); color: var(--warning); }
+.deadline-days.ok { background: rgba(34,197,94,0.1); color: #16a34a; }
+.deadline-days.overdue { background: var(--danger); color: #fff; }
+
+.deadline-info {
+    flex: 1;
+}
+
+.deadline-desc {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.deadline-client {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.deadline-service-pill {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+/* ================================================================
+   CLIENT DETAIL VIEW
+   ================================================================ */
+#client-detail-view { display: none; }
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 20px;
+}
+
+.btn-back:hover { background: #f8fafc; color: var(--text-primary); }
+
+.detail-header {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+}
+
+.detail-company-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.detail-info-item {
+    font-size: 13px;
+}
+
+.detail-info-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+.detail-info-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Service Panels */
+.service-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.service-panel {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-sm);
+    border-top: 3px solid var(--primary);
+}
+
+.service-panel.tax { border-top-color: var(--success); }
+.service-panel.compilation { border-top-color: var(--purple); }
+
+.service-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.service-panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-transform: capitalize;
+}
+
+.status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.status-badge.not_started { background: #f1f5f9; color: var(--text-muted); }
+.status-badge.in_progress, .status-badge.fieldwork, .status-badge.data_received { background: rgba(59,130,246,0.1); color: var(--primary); }
+.status-badge.planning { background: rgba(245,158,11,0.1); color: var(--warning); }
+.status-badge.review, .status-badge.pbc_pending { background: rgba(245,158,11,0.1); color: var(--warning); }
+.status-badge.completion, .status-badge.generated { background: rgba(6,182,212,0.1); color: var(--info); }
+.status-badge.completed, .status-badge.done { background: rgba(34,197,94,0.1); color: #16a34a; }
+
+.service-panel-progress {
+    margin-bottom: 12px;
+}
+
+.service-panel-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.service-panel-pct {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.service-panel-stage {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.service-panel-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.service-panel-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+
+.service-panel-bar-fill.audit { background: var(--primary); }
+.service-panel-bar-fill.tax { background: var(--success); }
+.service-panel-bar-fill.compilation { background: var(--purple); }
+
+.service-panel-deadline {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--card-border);
+}
+
+.btn-open-viewer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-open-viewer:hover { background: #f8fafc; color: var(--text-primary); border-color: var(--primary); }
+
+/* PBC Section */
+.section-panel {
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.section-panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pbc-filters {
+    display: flex;
+    gap: 6px;
+}
+
+.pbc-filter-btn {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pbc-filter-btn:hover { background: #f8fafc; }
+.pbc-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.pbc-stats {
+    padding: 12px 20px;
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--card-border);
+    background: #f8fafc;
+}
+
+.pbc-stat {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.pbc-stat strong {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+/* Tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.data-table thead th {
+    padding: 10px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--card-border);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    background: #fafbfc;
+}
+
+.data-table thead th:hover { color: var(--text-primary); }
+
+.data-table tbody td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--text-primary);
+    vertical-align: top;
+}
+
+.data-table tbody tr:hover { background: #fafbfc; }
+
+.status-cell {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-cell.received { background: rgba(34,197,94,0.1); color: #16a34a; }
+.status-cell.outstanding, .status-cell.not-received { background: rgba(239,68,68,0.1); color: var(--danger); }
+.status-cell.pending { background: rgba(245,158,11,0.1); color: var(--warning); }
+.status-cell.not-applicable { background: #f1f5f9; color: var(--text-muted); }
+.status-cell.open { background: rgba(245,158,11,0.1); color: var(--warning); }
+.status-cell.resolved, .status-cell.closed { background: rgba(34,197,94,0.1); color: #16a34a; }
+
+/* ================================================================
+   EMPTY STATE & LOADING
+   ================================================================ */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.empty-state-desc {
+    font-size: 14px;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: var(--nav-width);
+    right: 0;
+    bottom: 0;
+    background: rgba(241,245,249,0.8);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay.visible { display: flex; }
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Error Toast */
+.error-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--danger);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 200;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.error-toast.visible { transform: translateY(0); opacity: 1; }
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 1200px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .client-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 800px) {
+    .sidebar { width: 260px; min-width: 260px; }
+    .content { padding: 20px 16px; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .service-panels { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- ============================================================
+         SIDEBAR
+         ============================================================ -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h1>Project Manager</h1>
+            <div class="subtitle">Engagement Portfolio Dashboard</div>
+        </div>
+
+        <div class="sidebar-search">
+            <input type="text" id="client-search" placeholder="Search clients..." autocomplete="off">
+        </div>
+
+        <div class="sidebar-filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="audit">Audit</button>
+            <button class="filter-btn" data-filter="tax">Tax</button>
+            <button class="filter-btn" data-filter="compilation">Compilation</button>
+        </div>
+
+        <div class="sidebar-clients" id="sidebar-client-list">
+            <!-- Populated by JS -->
+        </div>
+
+        <div class="sidebar-footer">
+            <button class="btn-refresh" id="btn-refresh" onclick="refreshAll()">
+                <span class="btn-text">&#x21bb; Refresh All</span>
+                <span class="spinner">&#x21bb;</span>
+            </button>
+        </div>
+
+        <div class="sidebar-status" id="sidebar-status">
+            Last updated: --
+        </div>
+    </nav>
+
+    <!-- ============================================================
+         MAIN CONTENT
+         ============================================================ -->
+    <main class="content">
+        <!-- Portfolio View -->
+        <div id="portfolio-view">
+            <div class="view-title">Portfolio Overview</div>
+
+            <div class="kpi-row">
+                <div class="kpi-card blue">
+                    <div class="kpi-icon">&#x1F4BC;</div>
+                    <div class="kpi-value" id="kpi-clients">0</div>
+                    <div class="kpi-label">Total Clients</div>
+                </div>
+                <div class="kpi-card red">
+                    <div class="kpi-icon">&#x1F4CB;</div>
+                    <div class="kpi-value" id="kpi-pbc">0</div>
+                    <div class="kpi-label">PBC Outstanding</div>
+                </div>
+                <div class="kpi-card amber">
+                    <div class="kpi-icon">&#x2753;</div>
+                    <div class="kpi-value" id="kpi-queries">0</div>
+                    <div class="kpi-label">Open Queries</div>
+                </div>
+                <div class="kpi-card teal">
+                    <div class="kpi-icon">&#x1F4C5;</div>
+                    <div class="kpi-value" id="kpi-deadlines">0</div>
+                    <div class="kpi-label">Upcoming Deadlines</div>
+                </div>
+            </div>
+
+            <div class="section-header">Clients</div>
+            <div class="client-grid" id="client-grid">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="section-header">Upcoming Deadlines</div>
+            <div class="deadlines-section">
+                <div class="deadline-list" id="deadline-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Detail View -->
+        <div id="client-detail-view">
+            <button class="btn-back" onclick="showPortfolio()">
+                &#x2190; Back to Portfolio
+            </button>
+
+            <div class="detail-header" id="detail-header">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="service-panels" id="service-panels">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="section-panel" id="pbc-section">
+                <div class="section-panel-header">
+                    <div class="section-panel-title">Consolidated PBC Checklist</div>
+                    <div class="pbc-filters">
+                        <button class="pbc-filter-btn active" data-pbc-filter="all" onclick="filterPBC('all')">All</button>
+                        <button class="pbc-filter-btn" data-pbc-filter="outstanding" onclick="filterPBC('outstanding')">Outstanding</button>
+                        <button class="pbc-filter-btn" data-pbc-filter="received" onclick="filterPBC('received')">Received</button>
+                    </div>
+                </div>
+                <div class="pbc-stats" id="pbc-stats">
+                    <!-- Populated by JS -->
+                </div>
+                <table class="data-table" id="pbc-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('pbc-table', 0)">Ref</th>
+                            <th onclick="sortTable('pbc-table', 1)">Document</th>
+                            <th onclick="sortTable('pbc-table', 2)">Needed For</th>
+                            <th onclick="sortTable('pbc-table', 3)">Status</th>
+                            <th onclick="sortTable('pbc-table', 4)">Date Received</th>
+                            <th onclick="sortTable('pbc-table', 5)">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pbc-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-panel" id="queries-section">
+                <div class="section-panel-header">
+                    <div class="section-panel-title">Query List</div>
+                </div>
+                <table class="data-table" id="queries-table">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('queries-table', 0)">PM Ref</th>
+                            <th onclick="sortTable('queries-table', 1)">Service</th>
+                            <th onclick="sortTable('queries-table', 2)">Description</th>
+                            <th onclick="sortTable('queries-table', 3)">Amount (RM)</th>
+                            <th onclick="sortTable('queries-table', 4)">Status</th>
+                            <th onclick="sortTable('queries-table', 5)">Date Raised</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queries-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-panel" id="detail-deadlines-section">
+                <div class="section-panel-header">
+                    <div class="section-panel-title">Deadlines</div>
+                </div>
+                <div id="detail-deadline-list">
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Error Toast -->
+<div class="error-toast" id="error-toast"></div>
+
+<script>
+/* ================================================================
+   CONFIGURATION
+   ================================================================ */
+const API_BASE = '';
+const AUTO_REFRESH_MS = 60000;
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let dashboardData = null;
+let currentClient = null;
+let currentFilter = 'all';
+let currentPBCFilter = 'all';
+let allPBCItems = [];
+let autoRefreshTimer = null;
+let sortState = {};
+
+/* ================================================================
+   INITIALIZATION
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboard();
+    setupSearch();
+    setupFilters();
+    startAutoRefresh();
+});
+
+/* ================================================================
+   API CALLS
+   ================================================================ */
+async function apiFetch(path, options = {}) {
+    try {
+        const resp = await fetch(API_BASE + path, options);
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.error || `HTTP ${resp.status}`);
+        }
+        return await resp.json();
+    } catch (err) {
+        showError(`API Error: ${err.message}`);
+        throw err;
+    }
+}
+
+/* ================================================================
+   DASHBOARD LOADING
+   ================================================================ */
+async function loadDashboard() {
+    showLoading(true);
+    try {
+        dashboardData = await apiFetch('/api/dashboard');
+        renderKPIs(dashboardData.kpi);
+        renderClientGrid(dashboardData.clients);
+        renderSidebarClients(dashboardData.clients);
+        renderDeadlines(dashboardData.deadlines);
+        updateTimestamp();
+    } catch (err) {
+        console.error('Failed to load dashboard:', err);
+    } finally {
+        showLoading(false);
+    }
+}
+
+/* ================================================================
+   KPI RENDERING
+   ================================================================ */
+function renderKPIs(kpi) {
+    if (!kpi) return;
+    animateValue('kpi-clients', kpi.total_clients || 0);
+    animateValue('kpi-pbc', kpi.pbc_outstanding || 0);
+    animateValue('kpi-queries', kpi.open_queries || 0);
+    animateValue('kpi-deadlines', kpi.upcoming_deadlines || 0);
+}
+
+function animateValue(elementId, target) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const current = parseInt(el.textContent) || 0;
+    if (current === target) { el.textContent = target; return; }
+    const step = target > current ? 1 : -1;
+    const steps = Math.abs(target - current);
+    const delay = Math.max(20, Math.min(150, 600 / steps));
+    let val = current;
+    const timer = setInterval(() => {
+        val += step;
+        el.textContent = val;
+        if (val === target) clearInterval(timer);
+    }, delay);
+}
+
+/* ================================================================
+   CLIENT GRID
+   ================================================================ */
+function renderClientGrid(clients) {
+    const grid = document.getElementById('client-grid');
+    if (!clients || clients.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">&#x1F4C2;</div>
+                <div class="empty-state-title">No Engagements Yet</div>
+                <div class="empty-state-desc">Create a new engagement using /new-engagement to get started.</div>
+            </div>`;
+        return;
+    }
+
+    const filtered = filterClients(clients);
+    grid.innerHTML = filtered.map(client => renderClientCard(client)).join('');
+}
+
+function filterClients(clients) {
+    let filtered = clients;
+    const searchTerm = (document.getElementById('client-search').value || '').toLowerCase();
+
+    if (searchTerm) {
+        filtered = filtered.filter(c =>
+            (c.legal_name || '').toLowerCase().includes(searchTerm) ||
+            (c.display_name || '').toLowerCase().includes(searchTerm)
+        );
+    }
+
+    if (currentFilter !== 'all') {
+        filtered = filtered.filter(c => c.services && c.services[currentFilter]);
+    }
+
+    return filtered;
+}
+
+function renderClientCard(client) {
+    const progress = client.overall_progress_pct || 0;
+    const statusClass = progress > 75 ? 'status-green' : progress > 25 ? 'status-amber' : 'status-red';
+    const progressColor = progress > 75 ? '#22c55e' : progress > 25 ? '#f59e0b' : '#ef4444';
+    const progressBg = progress > 75 ? 'rgba(34,197,94,0.1)' : progress > 25 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)';
+
+    const services = client.services || {};
+    const servicesDetail = client.services_detail || {};
+    const servicePills = Object.entries(services)
+        .filter(([_, enabled]) => enabled)
+        .map(([svc]) => `<span class="service-pill ${svc}">${svc}</span>`)
+        .join('');
+
+    const progressBars = Object.entries(servicesDetail)
+        .filter(([_, d]) => d.enabled)
+        .map(([svc, d]) => `
+            <div class="service-progress-row">
+                <span class="service-progress-label">${svc}</span>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill ${svc}" style="width: ${d.progress_pct || 0}%"></div>
+                </div>
+                <span class="service-progress-pct">${d.progress_pct || 0}%</span>
+            </div>
+        `).join('');
+
+    const pbcOutstanding = (client.pbc_summary && client.pbc_summary.outstanding) || 0;
+    const pbcClass = pbcOutstanding > 0 ? 'has-outstanding' : '';
+
+    // Nearest deadline
+    let deadlineHtml = '<span class="deadline-badge">No deadlines</span>';
+    const deadlines = client.deadlines || [];
+    if (deadlines.length > 0) {
+        const nearest = findNearestDeadline(deadlines);
+        if (nearest) {
+            const days = nearest.days_remaining;
+            const urgency = days !== null ? (days < 7 ? 'urgent' : days < 30 ? 'soon' : '') : '';
+            const daysText = days !== null ? (days < 0 ? `${Math.abs(days)}d overdue` : `${days}d remaining`) : '';
+            deadlineHtml = `<span class="deadline-badge ${urgency}">${nearest.date} (${daysText})</span>`;
+        }
+    }
+
+    // Also check per-service deadlines
+    for (const [svc, detail] of Object.entries(servicesDetail)) {
+        if (detail.enabled && detail.deadline) {
+            const d = parseDeadlineDate(detail.deadline);
+            if (d) {
+                const days = Math.ceil((d - new Date()) / 86400000);
+                if (deadlines.length === 0) {
+                    const urgency = days < 7 ? 'urgent' : days < 30 ? 'soon' : '';
+                    deadlineHtml = `<span class="deadline-badge ${urgency}">${detail.deadline} (${days}d)</span>`;
+                    break;
+                }
+            }
+        }
+    }
+
+    return `
+        <div class="client-card ${statusClass}" onclick="showClientDetail('${encodeURIComponent(client.folder)}')">
+            <div class="client-card-header">
+                <div class="client-card-name">${escapeHtml(client.legal_name || client.folder)}</div>
+                <span class="client-card-progress-badge" style="background: ${progressBg}; color: ${progressColor};">
+                    ${progress}%
+                </span>
+            </div>
+            <div class="client-card-services">${servicePills}</div>
+            <div class="service-progress-list">${progressBars}</div>
+            <div class="client-card-footer">
+                <span class="pbc-badge ${pbcClass}">&#x1F4CB; ${pbcOutstanding} PBC outstanding</span>
+                ${deadlineHtml}
+            </div>
+        </div>
+    `;
+}
+
+/* ================================================================
+   SIDEBAR CLIENTS
+   ================================================================ */
+function renderSidebarClients(clients) {
+    const list = document.getElementById('sidebar-client-list');
+    if (!clients || clients.length === 0) {
+        list.innerHTML = '<div style="padding: 20px; text-align: center; opacity: 0.5;">No clients</div>';
+        return;
+    }
+
+    const filtered = filterClients(clients);
+    list.innerHTML = filtered.map(client => {
+        const isActive = currentClient === client.folder ? 'active' : '';
+        const services = client.services || {};
+        const dots = Object.entries(services)
+            .filter(([_, enabled]) => enabled)
+            .map(([svc]) => `<span class="service-dot ${svc}" title="${svc}"></span>`)
+            .join('');
+        const progress = client.overall_progress_pct || 0;
+
+        return `
+            <div class="client-nav-item ${isActive}" onclick="showClientDetail('${encodeURIComponent(client.folder)}')">
+                <div class="client-nav-name">${escapeHtml(client.legal_name || client.folder)}</div>
+                <div class="client-nav-meta">
+                    <span>${progress}% complete</span>
+                </div>
+                <div class="client-nav-services">${dots}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/* ================================================================
+   DEADLINES
+   ================================================================ */
+function renderDeadlines(deadlines) {
+    const list = document.getElementById('deadline-list');
+    if (!deadlines || deadlines.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state" style="padding: 30px;">
+                <div class="empty-state-desc">No upcoming deadlines</div>
+            </div>`;
+        return;
+    }
+
+    // Sort by deadline date
+    const sorted = [...deadlines].sort((a, b) => {
+        const da = a.deadline || '';
+        const db = b.deadline || '';
+        return da.localeCompare(db);
+    });
+
+    // Only show next 10
+    const top = sorted.slice(0, 10);
+
+    list.innerHTML = top.map(dl => {
+        const days = dl.days_remaining;
+        let daysClass = 'ok';
+        let daysText = '--';
+        let isOverdue = false;
+
+        if (days !== null && days !== undefined) {
+            if (days < 0) {
+                daysClass = 'overdue';
+                daysText = `${Math.abs(days)}d overdue`;
+                isOverdue = true;
+            } else if (days <= 7) {
+                daysClass = 'urgent';
+                daysText = `${days}d left`;
+            } else if (days <= 30) {
+                daysClass = 'soon';
+                daysText = `${days}d left`;
+            } else {
+                daysText = `${days}d left`;
+            }
+        }
+
+        const svcColor = dl.service === 'audit' ? 'var(--primary)' :
+                          dl.service === 'tax' ? 'var(--success)' :
+                          dl.service === 'compilation' ? 'var(--purple)' : 'var(--text-muted)';
+        const svcBg = dl.service === 'audit' ? 'rgba(59,130,246,0.1)' :
+                      dl.service === 'tax' ? 'rgba(34,197,94,0.1)' :
+                      dl.service === 'compilation' ? 'rgba(139,92,246,0.1)' : '#f1f5f9';
+
+        return `
+            <div class="deadline-item ${isOverdue ? 'overdue' : ''}">
+                <div class="deadline-date">${dl.deadline || '--'}</div>
+                <span class="deadline-days ${daysClass}">${daysText}</span>
+                <div class="deadline-info">
+                    <div class="deadline-desc">${escapeHtml(dl.description || '')}</div>
+                    <div class="deadline-client">${escapeHtml(dl.client_name || '')}</div>
+                </div>
+                ${dl.service ? `<span class="deadline-service-pill" style="background: ${svcBg}; color: ${svcColor};">${dl.service}</span>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+/* ================================================================
+   CLIENT DETAIL VIEW
+   ================================================================ */
+async function showClientDetail(encodedFolder) {
+    const folder = decodeURIComponent(encodedFolder);
+    currentClient = folder;
+
+    document.getElementById('portfolio-view').style.display = 'none';
+    document.getElementById('client-detail-view').style.display = 'block';
+
+    // Update sidebar active state
+    renderSidebarClients(dashboardData ? dashboardData.clients : []);
+
+    showLoading(true);
+
+    try {
+        // Fetch all data in parallel
+        const [engagement, pbc, queries, status] = await Promise.all([
+            apiFetch(`/api/engagement/${encodeURIComponent(folder)}`).catch(() => null),
+            apiFetch(`/api/pbc/${encodeURIComponent(folder)}`).catch(() => ({ items: [], stats: {} })),
+            apiFetch(`/api/queries/${encodeURIComponent(folder)}`).catch(() => ({ items: [], stats: {} })),
+            apiFetch(`/api/status/${encodeURIComponent(folder)}`).catch(() => ({})),
+        ]);
+
+        if (engagement) {
+            renderDetailHeader(engagement);
+            renderServicePanels(engagement, status);
+            renderDetailDeadlines(engagement);
+        }
+
+        allPBCItems = pbc.items || [];
+        renderPBCStats(pbc.stats || {});
+        renderPBCTable(allPBCItems);
+        renderQueriesTable(queries.items || []);
+    } catch (err) {
+        console.error('Failed to load client detail:', err);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function showPortfolio() {
+    currentClient = null;
+    document.getElementById('portfolio-view').style.display = 'block';
+    document.getElementById('client-detail-view').style.display = 'none';
+    renderSidebarClients(dashboardData ? dashboardData.clients : []);
+}
+
+function renderDetailHeader(engagement) {
+    const client = engagement.client || {};
+    const header = document.getElementById('detail-header');
+
+    header.innerHTML = `
+        <div class="detail-company-name">${escapeHtml(client.legal_name || '')}</div>
+        <div class="detail-info-grid">
+            <div class="detail-info-item">
+                <div class="detail-info-label">Registration No</div>
+                <div class="detail-info-value">${escapeHtml(client.registration_no || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Tax File No</div>
+                <div class="detail-info-value">${escapeHtml(client.tax_file_no || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Financial Year End</div>
+                <div class="detail-info-value">${escapeHtml(client.fye_date || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Framework</div>
+                <div class="detail-info-value">${escapeHtml(client.reporting_framework || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Contact Person</div>
+                <div class="detail-info-value">${escapeHtml(client.contact_person || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Email</div>
+                <div class="detail-info-value">${escapeHtml(client.contact_email || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Phone</div>
+                <div class="detail-info-value">${escapeHtml(client.contact_phone || 'N/A')}</div>
+            </div>
+            <div class="detail-info-item">
+                <div class="detail-info-label">Principal Activities</div>
+                <div class="detail-info-value">${escapeHtml(client.principal_activities || 'N/A')}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderServicePanels(engagement, probeStatus) {
+    const services = engagement.services || {};
+    const panels = document.getElementById('service-panels');
+    let html = '';
+
+    for (const svc of ['audit', 'tax', 'compilation']) {
+        const cfg = services[svc] || {};
+        if (!cfg.enabled) continue;
+
+        const probe = (probeStatus && probeStatus[svc]) || {};
+        const progressPct = probe.estimated_progress || cfg.progress_pct || 0;
+        const stage = probe.stage || cfg.status || 'not_started';
+        const deadline = cfg.deadline || '';
+        const statusLabel = formatStatus(stage);
+
+        const barColorClass = svc;
+
+        html += `
+            <div class="service-panel ${svc}">
+                <div class="service-panel-header">
+                    <div class="service-panel-title">${svc}</div>
+                    <span class="status-badge ${stage.replace(/\s+/g, '_')}">${statusLabel}</span>
+                </div>
+                <div class="service-panel-progress">
+                    <div class="service-panel-progress-header">
+                        <span class="service-panel-pct">${progressPct}%</span>
+                        <span class="service-panel-stage">${formatStatus(stage)}</span>
+                    </div>
+                    <div class="service-panel-bar">
+                        <div class="service-panel-bar-fill ${barColorClass}" style="width: ${progressPct}%"></div>
+                    </div>
+                </div>
+                ${deadline ? `<div class="service-panel-deadline">Deadline: ${escapeHtml(deadline)}</div>` : ''}
+                <button class="btn-open-viewer" onclick="openViewer('${svc}')">
+                    &#x2197; Open ${capitalize(svc)} Viewer
+                </button>
+            </div>
+        `;
+    }
+
+    if (!html) {
+        html = '<div class="empty-state"><div class="empty-state-desc">No services enabled</div></div>';
+    }
+
+    panels.innerHTML = html;
+}
+
+function renderDetailDeadlines(engagement) {
+    const container = document.getElementById('detail-deadline-list');
+    const deadlines = engagement.deadlines || [];
+    const services = engagement.services || {};
+
+    let allDeadlines = [...deadlines];
+
+    // Add per-service deadlines
+    for (const [svc, cfg] of Object.entries(services)) {
+        if (cfg.enabled && cfg.deadline) {
+            allDeadlines.push({
+                date: cfg.deadline,
+                service: svc,
+                description: `${capitalize(svc)} deadline`
+            });
+        }
+    }
+
+    if (allDeadlines.length === 0) {
+        container.innerHTML = '<div style="padding: 16px 20px; color: var(--text-muted); font-size: 13px;">No deadlines set</div>';
+        return;
+    }
+
+    allDeadlines.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+    container.innerHTML = allDeadlines.map(dl => {
+        const dlDate = dl.date || dl.deadline || '';
+        const d = parseDeadlineDate(dlDate);
+        let daysText = '--';
+        let daysClass = 'ok';
+
+        if (d) {
+            const days = Math.ceil((d - new Date()) / 86400000);
+            if (days < 0) { daysClass = 'overdue'; daysText = `${Math.abs(days)}d overdue`; }
+            else if (days <= 7) { daysClass = 'urgent'; daysText = `${days}d left`; }
+            else if (days <= 30) { daysClass = 'soon'; daysText = `${days}d left`; }
+            else { daysText = `${days}d left`; }
+        }
+
+        return `
+            <div class="deadline-item">
+                <div class="deadline-date">${dlDate}</div>
+                <span class="deadline-days ${daysClass}">${daysText}</span>
+                <div class="deadline-info">
+                    <div class="deadline-desc">${escapeHtml(dl.description || '')}</div>
+                </div>
+                ${dl.service ? `<span class="deadline-service-pill" style="background: rgba(100,116,139,0.1); color: var(--text-secondary);">${dl.service}</span>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+/* ================================================================
+   PBC TABLE
+   ================================================================ */
+function renderPBCStats(stats) {
+    const el = document.getElementById('pbc-stats');
+    el.innerHTML = `
+        <div class="pbc-stat">Total: <strong>${stats.total || 0}</strong></div>
+        <div class="pbc-stat">Received: <strong style="color: var(--success);">${stats.received || 0}</strong></div>
+        <div class="pbc-stat">Outstanding: <strong style="color: var(--danger);">${stats.outstanding || 0}</strong></div>
+        <div class="pbc-stat">N/A: <strong style="color: var(--text-muted);">${stats.not_applicable || 0}</strong></div>
+    `;
+}
+
+function renderPBCTable(items) {
+    const tbody = document.getElementById('pbc-tbody');
+    let filtered = items;
+
+    if (currentPBCFilter === 'outstanding') {
+        filtered = items.filter(i => {
+            const s = (i.status || '').toLowerCase();
+            return s.includes('outstanding') || s.includes('pending') || s.includes('not received');
+        });
+    } else if (currentPBCFilter === 'received') {
+        filtered = items.filter(i => (i.status || '').toLowerCase().includes('received'));
+    }
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No PBC items found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+        const statusClass = getStatusClass(item.status);
+        return `
+            <tr>
+                <td style="font-family: var(--font-mono); font-weight: 600;">${escapeHtml(item.ref || '')}</td>
+                <td>${escapeHtml(item.document || '')}</td>
+                <td>${escapeHtml(item.needed_for || '')}</td>
+                <td><span class="status-cell ${statusClass}">${escapeHtml(item.status || '')}</span></td>
+                <td>${escapeHtml(item.date_received || '')}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.remarks || '')}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterPBC(filter) {
+    currentPBCFilter = filter;
+    document.querySelectorAll('.pbc-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.pbcFilter === filter);
+    });
+    renderPBCTable(allPBCItems);
+}
+
+/* ================================================================
+   QUERIES TABLE
+   ================================================================ */
+function renderQueriesTable(items) {
+    const tbody = document.getElementById('queries-tbody');
+
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No queries found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = items.map(item => {
+        const statusClass = getQueryStatusClass(item.status);
+        const svcClass = (item.service || '').toLowerCase();
+        return `
+            <tr>
+                <td style="font-family: var(--font-mono); font-weight: 600;">${escapeHtml(item.pm_ref || '')}</td>
+                <td><span class="service-pill ${svcClass}">${escapeHtml(item.service || '')}</span></td>
+                <td>${escapeHtml(item.description || '')}</td>
+                <td style="font-family: var(--font-mono); text-align: right;">${escapeHtml(item.amount || '')}</td>
+                <td><span class="status-cell ${statusClass}">${escapeHtml(item.status || '')}</span></td>
+                <td>${escapeHtml(item.date_raised || '')}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/* ================================================================
+   TABLE SORTING
+   ================================================================ */
+function sortTable(tableId, colIndex) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    const stateKey = `${tableId}-${colIndex}`;
+    const currentDir = sortState[stateKey] || 'asc';
+    const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+    sortState[stateKey] = newDir;
+
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+        const aVal = (a.cells[colIndex] && a.cells[colIndex].textContent || '').trim().toLowerCase();
+        const bVal = (b.cells[colIndex] && b.cells[colIndex].textContent || '').trim().toLowerCase();
+        const cmp = aVal.localeCompare(bVal, undefined, { numeric: true });
+        return newDir === 'asc' ? cmp : -cmp;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+/* ================================================================
+   SEARCH & FILTERS
+   ================================================================ */
+function setupSearch() {
+    const input = document.getElementById('client-search');
+    let timeout;
+    input.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            if (dashboardData) {
+                renderClientGrid(dashboardData.clients);
+                renderSidebarClients(dashboardData.clients);
+            }
+        }, 200);
+    });
+}
+
+function setupFilters() {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            if (dashboardData) {
+                renderClientGrid(dashboardData.clients);
+                renderSidebarClients(dashboardData.clients);
+            }
+        });
+    });
+}
+
+/* ================================================================
+   REFRESH
+   ================================================================ */
+async function refreshAll() {
+    const btn = document.getElementById('btn-refresh');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+        await apiFetch('/api/refresh', { method: 'POST' });
+        await loadDashboard();
+        if (currentClient) {
+            await showClientDetail(encodeURIComponent(currentClient));
+        }
+    } catch (err) {
+        console.error('Refresh failed:', err);
+    } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+}
+
+function startAutoRefresh() {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(() => {
+        loadDashboard();
+    }, AUTO_REFRESH_MS);
+}
+
+function updateTimestamp() {
+    const el = document.getElementById('sidebar-status');
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    el.textContent = `Last updated: ${timeStr}`;
+}
+
+/* ================================================================
+   VIEWER LAUNCHER
+   ================================================================ */
+function openViewer(service) {
+    // Sub-agent viewers run on port 8000 by default
+    // This is a best-effort link; actual viewer may need to be started separately
+    window.open('http://localhost:8000', '_blank');
+}
+
+/* ================================================================
+   UTILITY FUNCTIONS
+   ================================================================ */
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatStatus(status) {
+    if (!status) return 'Not Started';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function getStatusClass(status) {
+    if (!status) return 'outstanding';
+    const s = status.toLowerCase();
+    if (s.includes('received') || s.includes('derived')) return 'received';
+    if (s.includes('pending') || s.includes('awaiting')) return 'pending';
+    if (s.includes('n/a') || s.includes('not applicable')) return 'not-applicable';
+    return 'outstanding';
+}
+
+function getQueryStatusClass(status) {
+    if (!status) return 'open';
+    const s = status.toLowerCase();
+    if (s.includes('resolved') || s.includes('closed') || s.includes('answered')) return 'resolved';
+    return 'open';
+}
+
+function parseDeadlineDate(dateStr) {
+    if (!dateStr) return null;
+    // Try ISO format first: YYYY-MM-DD
+    const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+    // Try "DD Month YYYY" format
+    const months = { january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+                     july: 6, august: 7, september: 8, october: 9, november: 10, december: 11 };
+    const dmy = dateStr.match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/i);
+    if (dmy && months[dmy[2].toLowerCase()] !== undefined) {
+        return new Date(parseInt(dmy[3]), months[dmy[2].toLowerCase()], parseInt(dmy[1]));
+    }
+    return null;
+}
+
+function findNearestDeadline(deadlines) {
+    let nearest = null;
+    let nearestDays = Infinity;
+
+    for (const dl of deadlines) {
+        const dlDate = dl.date || dl.deadline || '';
+        const d = parseDeadlineDate(dlDate);
+        if (!d) continue;
+        const days = Math.ceil((d - new Date()) / 86400000);
+        if (Math.abs(days) < Math.abs(nearestDays)) {
+            nearestDays = days;
+            nearest = { ...dl, days_remaining: days, date: dlDate };
+        }
+    }
+
+    return nearest;
+}
+
+function showLoading(visible) {
+    const overlay = document.getElementById('loading-overlay');
+    overlay.classList.toggle('visible', visible);
+}
+
+function showError(message) {
+    const toast = document.getElementById('error-toast');
+    toast.textContent = message;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 5000);
+}
+</script>
+</body>
+</html>
