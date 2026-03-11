@@ -34,7 +34,7 @@ from tools.status_reader import StatusReader
 # Configuration
 # ---------------------------------------------------------------------------
 PORT = 8100
-CLIENTS_DIR = os.path.join(PROJECT_ROOT, "Clients")
+CLIENTS_DIR = os.path.realpath(os.path.join(PROJECT_ROOT, "Clients"))
 
 # Instantiate core tools
 engine = PMEngine(CLIENTS_DIR)
@@ -52,6 +52,15 @@ MIME_TYPES = {
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon",
 }
+
+# Whitelist of static file extensions that can be served
+ALLOWED_STATIC_EXTENSIONS = {".html", ".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico"}
+
+
+def _is_safe_client_folder(client_folder: str) -> bool:
+    """Validate that a client folder name resolves within CLIENTS_DIR."""
+    resolved = os.path.realpath(os.path.join(CLIENTS_DIR, client_folder))
+    return resolved.startswith(CLIENTS_DIR + os.sep) or resolved == CLIENTS_DIR
 
 
 # ---------------------------------------------------------------------------
@@ -386,17 +395,23 @@ class PMDashboardHandler(http.server.BaseHTTPRequestHandler):
         match = re.match(r"^/api/engagement/(.+)$", path)
         if match:
             client_folder = urllib.parse.unquote(match.group(1))
+            if not _is_safe_client_folder(client_folder):
+                self._send_json({"error": "Invalid client folder"}, status=403)
+                return
             try:
                 data = engine.load_engagement(client_folder)
                 self._send_json(data)
-            except FileNotFoundError as e:
-                self._send_json({"error": str(e)}, status=404)
+            except FileNotFoundError:
+                self._send_json({"error": "Engagement not found"}, status=404)
             return
 
         # Route: /api/pbc/<client>
         match = re.match(r"^/api/pbc/(.+)$", path)
         if match:
             client_folder = urllib.parse.unquote(match.group(1))
+            if not _is_safe_client_folder(client_folder):
+                self._send_json({"error": "Invalid client folder"}, status=403)
+                return
             data = get_pbc_data(client_folder)
             self._send_json(data)
             return
@@ -405,6 +420,9 @@ class PMDashboardHandler(http.server.BaseHTTPRequestHandler):
         match = re.match(r"^/api/queries/(.+)$", path)
         if match:
             client_folder = urllib.parse.unquote(match.group(1))
+            if not _is_safe_client_folder(client_folder):
+                self._send_json({"error": "Invalid client folder"}, status=403)
+                return
             data = get_queries_data(client_folder)
             self._send_json(data)
             return
@@ -413,6 +431,9 @@ class PMDashboardHandler(http.server.BaseHTTPRequestHandler):
         match = re.match(r"^/api/status/(.+)$", path)
         if match:
             client_folder = urllib.parse.unquote(match.group(1))
+            if not _is_safe_client_folder(client_folder):
+                self._send_json({"error": "Invalid client folder"}, status=403)
+                return
             data = get_status_data(client_folder)
             self._send_json(data)
             return
@@ -453,15 +474,21 @@ class PMDashboardHandler(http.server.BaseHTTPRequestHandler):
 
     def _serve_file(self, filepath):
         """Serve a static file from the project root."""
-        # Security: prevent directory traversal
-        safe_path = os.path.normpath(filepath).replace("\\", "/")
-        if safe_path.startswith("..") or safe_path.startswith("/"):
+        # Security: resolve to absolute path and verify it stays within PROJECT_ROOT
+        full_path = os.path.realpath(os.path.join(PROJECT_ROOT, filepath))
+        project_root_real = os.path.realpath(PROJECT_ROOT)
+        if not (full_path.startswith(project_root_real + os.sep) or full_path == project_root_real):
             self._send_json({"error": "Forbidden"}, status=403)
             return
 
-        full_path = os.path.join(PROJECT_ROOT, safe_path)
+        # Only serve whitelisted static file extensions
+        ext = os.path.splitext(full_path)[1].lower()
+        if ext not in ALLOWED_STATIC_EXTENSIONS:
+            self._send_json({"error": "Forbidden"}, status=403)
+            return
+
         if not os.path.isfile(full_path):
-            self._send_json({"error": f"File not found: {filepath}"}, status=404)
+            self._send_json({"error": "Not found"}, status=404)
             return
 
         ext = os.path.splitext(full_path)[1].lower()
@@ -480,8 +507,8 @@ class PMDashboardHandler(http.server.BaseHTTPRequestHandler):
             self._send_json({"error": "Internal server error"}, status=500)
 
     def _add_cors_headers(self):
-        """Add CORS headers for local development."""
-        self.send_header("Access-Control-Allow-Origin", "*")
+        """Add CORS headers restricted to localhost only."""
+        self.send_header("Access-Control-Allow-Origin", f"http://localhost:{PORT}")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
@@ -513,7 +540,7 @@ def main():
         print("       Dashboard will show no data until engagements are created.")
         print()
 
-    server = http.server.HTTPServer(("", PORT), PMDashboardHandler)
+    server = http.server.HTTPServer(("127.0.0.1", PORT), PMDashboardHandler)
     print(f"Server running on http://localhost:{PORT}")
     print("Press Ctrl+C to stop.\n")
 

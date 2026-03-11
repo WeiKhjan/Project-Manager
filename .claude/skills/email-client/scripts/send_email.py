@@ -108,8 +108,14 @@ def markdown_to_html(md_text):
         # Italic (*text* or _text_) — avoid matching already-processed bold
         text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)
         text = re.sub(r"(?<!_)_(?!_)(.+?)(?<!_)_(?!_)", r"<em>\1</em>", text)
-        # Links [text](url)
-        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+        # Links [text](url) — only allow safe protocols
+        def _safe_link(m):
+            link_text, url = m.group(1), m.group(2)
+            url_stripped = url.strip().lower()
+            if url_stripped.startswith(("http://", "https://", "mailto:")):
+                return f'<a href="{url}">{link_text}</a>'
+            return link_text  # strip unsafe links (javascript:, data:, etc.)
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _safe_link, text)
         return text
 
     def _is_table_separator(line):

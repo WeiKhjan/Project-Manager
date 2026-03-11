@@ -17,6 +17,7 @@ Usage:
 """
 
 import os
+import stat
 import sys
 import json
 
@@ -123,9 +124,14 @@ def get_gmail_service():
             creds = flow.run_local_server(port=0)
             print("[gmail_auth] Authorization successful.")
 
-        # Save the token for future runs
+        # Save the token for future runs with restricted permissions
         with open(TOKEN_PATH, "w", encoding="utf-8") as token_file:
             token_file.write(creds.to_json())
+        # Restrict token file to owner-only read/write (0o600)
+        try:
+            os.chmod(TOKEN_PATH, stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
+            pass  # chmod may not fully apply on Windows, but best effort
         print(f"[gmail_auth] Token saved to {TOKEN_PATH}")
 
     # --- Build and return the Gmail service ---

@@ -57,6 +57,9 @@ class PMEngine:
         else:
             self.clients_dir = clients_dir
 
+        # Resolve to absolute path for safe comparisons
+        self.clients_dir = os.path.realpath(self.clients_dir)
+
         # Ensure the Clients directory exists on initialisation
         os.makedirs(self.clients_dir, exist_ok=True)
 
@@ -85,7 +88,7 @@ class PMEngine:
             raise ValueError("client_data must include a non-empty 'legal_name'.")
 
         # Create folder structure: Clients/<legal_name>/{notes, output}
-        client_dir = os.path.join(self.clients_dir, legal_name)
+        client_dir = self._safe_client_path(legal_name)
         os.makedirs(os.path.join(client_dir, "notes"), exist_ok=True)
         os.makedirs(os.path.join(client_dir, "output"), exist_ok=True)
 
@@ -191,11 +194,10 @@ class PMEngine:
         FileNotFoundError
             If the engagement.json does not exist.
         """
-        path = os.path.join(self.clients_dir, client_name, "engagement.json")
+        path = self._safe_client_path(client_name, "engagement.json")
         if not os.path.isfile(path):
             raise FileNotFoundError(
-                f"No engagement.json found for client '{client_name}' "
-                f"at {path}"
+                f"No engagement.json found for client '{client_name}'."
             )
         return self._read_json(path)
 
@@ -215,7 +217,7 @@ class PMEngine:
         data.setdefault("_meta", {})
         data["_meta"]["lastModified"] = datetime.now().isoformat()
 
-        path = os.path.join(self.clients_dir, client_name, "engagement.json")
+        path = self._safe_client_path(client_name, "engagement.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self._write_json(path, data)
 
@@ -437,9 +439,7 @@ class PMEngine:
         entry : str
             Free-text log entry.
         """
-        log_path = os.path.join(
-            self.clients_dir, client_name, "status_log.md"
-        )
+        log_path = self._safe_client_path(client_name, "status_log.md")
         timestamp = datetime.now().isoformat()
         line = f"**[{timestamp}]** {entry}\n"
 
@@ -455,6 +455,25 @@ class PMEngine:
     # ==================================================================
     # Private helpers
     # ==================================================================
+
+    def _safe_client_path(self, client_name: str, *sub_paths) -> str:
+        """Resolve a client path and verify it stays within clients_dir.
+
+        Raises ValueError if the resolved path escapes the clients directory.
+        """
+        if ".." in client_name or "/" in client_name or "\\" in client_name:
+            raise ValueError(
+                f"Invalid client name '{client_name}': must not contain "
+                f"path separators or '..'."
+            )
+        resolved = os.path.realpath(
+            os.path.join(self.clients_dir, client_name, *sub_paths)
+        )
+        if not resolved.startswith(self.clients_dir + os.sep) and resolved != self.clients_dir:
+            raise ValueError(
+                f"Path traversal blocked for client name '{client_name}'."
+            )
+        return resolved
 
     def _resolve_sub_agent_folder(
         self, service: str, client_info: dict
