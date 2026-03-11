@@ -110,6 +110,66 @@ Working folder: Clients/[Company Legal Name]/"
 
 ---
 
+## PBC & Query Delegation Templates
+
+Use these ready-made spawn prompts when delegating PBC generation or query raising to sub-agents.
+
+### Audit PBC Delegation
+
+```
+/delegate audit Run /pbc to generate the PBC checklist for this audit engagement.
+Client: [Company Legal Name]
+Company No: [Registration Number]
+Financial Year End: [FYE Date]
+Reporting Framework: [MPERS/MFRS]
+Working folder: Clients/AWP_[ClientName]_FYE[Year]/
+```
+
+### Tax PBC Delegation
+
+```
+/delegate tax Run /pbc to generate the PBC checklist and initial query list in 07_PBC_QUERY/.
+Client: [CLIENT NAME IN UPPERCASE]
+Company No: [Registration Number]
+Year of Assessment: [YA Year]
+Basis Period: [Start Date] to [End Date]
+Working folder: Clients/[CLIENT NAME] YA [YEAR]/
+```
+
+### Compilation PBC Delegation
+
+```
+/delegate compilation Run /pbc to generate the PBC checklist Excel in output/.
+Client: [Company Legal Name]
+Company No: [Registration Number]
+Financial Year End: [FYE Date]
+Working folder: Clients/[Company Legal Name]/
+```
+
+### Audit Query Delegation
+
+```
+/delegate audit Review working papers and raise outstanding queries for items needing client clarification.
+Save queries to the G_Outstanding/ section.
+Client: [Company Legal Name]
+Company No: [Registration Number]
+Financial Year End: [FYE Date]
+Working folder: Clients/AWP_[ClientName]_FYE[Year]/
+```
+
+### Tax Query Delegation
+
+```
+/delegate tax Review tax computation and raise queries for items needing client clarification.
+Save queries in 07_PBC_QUERY/ as QRY_*.md files.
+Client: [CLIENT NAME IN UPPERCASE]
+Company No: [Registration Number]
+Year of Assessment: [YA Year]
+Working folder: Clients/[CLIENT NAME] YA [YEAR]/
+```
+
+---
+
 ## Delegate All (Parallel Spawn)
 
 `/delegate all [task]` spawns teammates for ALL enabled services simultaneously.

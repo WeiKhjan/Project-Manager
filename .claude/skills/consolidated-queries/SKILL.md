@@ -16,13 +16,43 @@ Merge outstanding queries from audit and tax services into a single tracking lis
 
 ## Workflow
 
-### Step 1: Load Engagement & Locate Query Files
+### Step 0: Prerequisite Check — Ensure Sub-Agents Have Done Work
+
+Queries arise during active audit/tax work. Before consolidating, verify that sub-agents have actually started working.
 
 ```python
 import sys
 sys.path.insert(0, r"C:\Users\khjan\Downloads\Pilot - Project Manager Main Agent")
 from tools.pm_engine import PMEngine
+from tools.status_reader import StatusReader
 
+engine = PMEngine()
+engagement = engine.load_engagement(client_name)
+
+# Probe sub-agent progress
+reader = StatusReader()
+service_status = reader.probe_all_services(engagement)
+
+for service in ('audit', 'tax'):
+    svc_cfg = engagement.get('services', {}).get(service, {})
+    if not svc_cfg.get('enabled'):
+        continue
+    progress = service_status.get(service, {}).get('estimated_progress', 0)
+    if progress < 25:
+        # Work hasn't started — queries cannot exist yet
+        # Agent Teams available → suggest delegating the work first
+        # Fallback → warn user: "[Service] engagement progress is only {progress}%.
+        #   Queries are raised during active work. Run /delegate {service} to start the work first."
+        pass
+    # If progress >= 25% but no query files found, that's legitimate (zero queries raised)
+```
+
+**Compilation is skipped** — the compilation agent does not have a formal query system.
+
+### Step 1: Load Engagement & Locate Query Files
+
+```python
+# If not already loaded above:
 engine = PMEngine()
 engagement = engine.load_engagement(client_name)
 ```
@@ -101,6 +131,8 @@ engine.save_engagement(client_name, engagement)
 
 ## Notes
 
-- Queries typically arise during active audit/tax work, so run this **after** sub-agents have been working
+- **Prerequisite:** Queries only exist after sub-agents have started working. Step 0 checks engagement progress and warns/delegates if work hasn't begun
+- If progress >= 25% but no query files are found, this is legitimate (zero queries raised) — proceed with empty query list for that service
+- Compilation is always skipped (no formal query system)
 - The query list is useful for `/client-summary` and `/email-client` to communicate outstanding items
 - Re-run whenever queries are raised or resolved

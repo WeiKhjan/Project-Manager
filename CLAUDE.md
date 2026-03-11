@@ -47,10 +47,10 @@ Clients/[Company Legal Name]/
 ## Engagement Lifecycle
 
 1. **Onboard** — Register new client, define which services are needed (any combination of audit, tax, compilation). Use `/new-engagement`.
-2. **Assess** — Review available documents. Delegate initial PBC generation to relevant sub-agents. Consolidate results. Use `/consolidated-pbc`.
-3. **Delegate** — Spawn sub-agents to perform specialist work. Use `/delegate`.
+2. **Delegate PBC & Query Generation** — PM spawns sub-agents to run their `/pbc` and `/query` skills. **PM never generates PBC checklists, queries, or domain-specific requests itself** — these require specialist standards knowledge. Use `/delegate`.
+3. **Delegate Specialist Work** — Spawn sub-agents to perform audit procedures, tax computations, or FS compilation. Use `/delegate`.
 4. **Monitor** — Track progress across all services. Probe sub-agent folders for file status. Use `/engagement-status`.
-5. **Consolidate** — Merge PBC checklists, queries, and outstanding items across all services. Use `/consolidated-pbc`, `/consolidated-queries`.
+5. **Consolidate (after sub-agents complete)** — Only run after confirming sub-agent output exists. Merge PBC checklists, queries, and outstanding items across all services. Use `/consolidated-pbc`, `/consolidated-queries`.
 6. **Communicate** — Generate client-facing summaries and emails. Use `/client-summary`, `/email-client`.
 7. **Complete** — Final review across all services, archive engagement.
 
@@ -101,7 +101,8 @@ When the user requests audit, tax, or compilation work, spawn teammates into the
 **Compilation Teammate:**
 - Working directory: `C:\Users\khjan\Downloads\Pilot - MPERS Compilation - Stand Alone - Claude`
 - Auto-reads: Compilation CLAUDE.md (MPERS/ISRS 4410, FSEngine)
-- Skills available: `/fs`, `/mpers-fs`, `client-engagement`
+- Skills available: `/fs`, `/mpers-fs`, `/pbc`, `client-engagement`
+- `/pbc` outputs Excel directly to `output/[Company] - PBC FYE [Year].xlsx` (no HTML viewer)
 - Spawn prompt must include: client name, company no, FYE, specific task
 
 ### Team Lead Behavior
@@ -112,6 +113,8 @@ The PM Lead does NOT write audit/tax/compilation working papers. The PM Lead ONL
 3. **Reviews output** from completed teammate work
 4. **Consolidates results** (PBC, queries, status) across all services
 5. **Communicates** with clients (summaries, emails)
+
+**Critical rule:** The PM Lead **never generates PBC checklists, queries, or domain-specific requests itself**. These require specialist standards knowledge (ISA for audit, ITA 1967 for tax, MPERS for compilation). Always delegate to the appropriate sub-agent first, then consolidate the results.
 
 ### Peer-to-Peer Communication
 
@@ -135,8 +138,10 @@ Define blocking relationships when creating tasks:
 | Generate working papers, tax computation, FS | **Spawn teammate** |
 | Run sub-agent skills (/awp, /fs, etc.) | **Spawn teammate** |
 | Create engagement folders in sub-agent projects | **Spawn teammate** |
+| Generate PBC checklists | **Spawn teammate** (requires domain expertise) |
+| Raise queries on working papers / computations | **Spawn teammate** (requires domain expertise) |
 | Check file existence in sub-agent folders | **Read directly** (no teammate needed) |
-| Read PBC/query markdown for consolidation | **Read directly** |
+| Read PBC/query markdown/Excel for consolidation | **Read directly** |
 | Probe engagement progress (file counts) | **Read directly** |
 
 ### Fallback Mode

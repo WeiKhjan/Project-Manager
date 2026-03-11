@@ -177,6 +177,95 @@ class PBCConsolidator:
         self.services = engagement_data.get('services', {})
 
     # ------------------------------------------------------------------
+    # Readiness check — verify sub-agents have generated PBC files
+    # ------------------------------------------------------------------
+
+    def check_pbc_readiness(self) -> dict:
+        """Check whether each enabled service has PBC files ready for consolidation.
+
+        For each enabled service, probes the expected file locations to determine
+        if the sub-agent has generated its PBC output.
+
+        Returns:
+            Dict keyed by service name with sub-dicts containing:
+            - ``ready`` (bool): Whether PBC files were found.
+            - ``files`` (list): Paths to found PBC files.
+            - ``enabled`` (bool): Whether the service is enabled.
+        """
+        result = {}
+
+        # --- Audit ---
+        audit_cfg = self.services.get('audit', {})
+        if audit_cfg.get('enabled'):
+            agent_dir = audit_cfg.get('agent_dir', '')
+            client_folder = audit_cfg.get('client_folder', '')
+            audit_files = []
+            if agent_dir and client_folder:
+                full_path = os.path.join(agent_dir, client_folder)
+                if os.path.isdir(full_path):
+                    for root, _dirs, files in os.walk(full_path):
+                        for fname in files:
+                            if not fname.lower().endswith('.md'):
+                                continue
+                            filepath = os.path.join(root, fname)
+                            try:
+                                with open(filepath, 'r', encoding='utf-8') as fh:
+                                    content = fh.read()
+                                if self._looks_like_pbc(content, fname):
+                                    audit_files.append(filepath)
+                            except (OSError, IOError):
+                                continue
+            result['audit'] = {
+                'ready': len(audit_files) > 0,
+                'files': audit_files,
+                'enabled': True,
+            }
+        else:
+            result['audit'] = {'ready': False, 'files': [], 'enabled': False}
+
+        # --- Tax ---
+        tax_cfg = self.services.get('tax', {})
+        if tax_cfg.get('enabled'):
+            agent_dir = tax_cfg.get('agent_dir', '')
+            client_folder = tax_cfg.get('client_folder', '')
+            tax_files = []
+            if agent_dir and client_folder:
+                pbc_dir = os.path.join(agent_dir, client_folder, '07_PBC_QUERY')
+                if os.path.isdir(pbc_dir):
+                    for fname in os.listdir(pbc_dir):
+                        if fname.lower().startswith('pbc_') and fname.lower().endswith('.md'):
+                            tax_files.append(os.path.join(pbc_dir, fname))
+            result['tax'] = {
+                'ready': len(tax_files) > 0,
+                'files': tax_files,
+                'enabled': True,
+            }
+        else:
+            result['tax'] = {'ready': False, 'files': [], 'enabled': False}
+
+        # --- Compilation ---
+        comp_cfg = self.services.get('compilation', {})
+        if comp_cfg.get('enabled'):
+            agent_dir = comp_cfg.get('agent_dir', '')
+            client_folder = comp_cfg.get('client_folder', '')
+            comp_files = []
+            if agent_dir and client_folder:
+                output_dir = os.path.join(agent_dir, client_folder, 'output')
+                if os.path.isdir(output_dir):
+                    for fname in os.listdir(output_dir):
+                        if fname.lower().endswith('.xlsx') and 'pbc' in fname.lower():
+                            comp_files.append(os.path.join(output_dir, fname))
+            result['compilation'] = {
+                'ready': len(comp_files) > 0,
+                'files': comp_files,
+                'enabled': True,
+            }
+        else:
+            result['compilation'] = {'ready': False, 'files': [], 'enabled': False}
+
+        return result
+
+    # ------------------------------------------------------------------
     # Public API — read PBC from each service
     # ------------------------------------------------------------------
 
@@ -260,11 +349,38 @@ class PBCConsolidator:
 
         return items
 
+    def read_compilation_pbc(self, compilation_folder: str) -> list:
+        """Read PBC items from the compilation agent's Excel PBC file.
+
+        Looks for an Excel file with 'PBC' in the filename under the client's
+        ``output/`` folder. Falls back to the hardcoded COMPILATION_REQUIRED_DOCS
+        list if no Excel file is found.
+
+        Args:
+            compilation_folder: Absolute path to the compilation client folder.
+
+        Returns:
+            List of PBC item dicts.
+        """
+        if compilation_folder and os.path.isdir(compilation_folder):
+            output_dir = os.path.join(compilation_folder, 'output')
+            if os.path.isdir(output_dir):
+                for fname in sorted(os.listdir(output_dir)):
+                    if fname.lower().endswith('.xlsx') and 'pbc' in fname.lower():
+                        excel_path = os.path.join(output_dir, fname)
+                        items = self._read_pbc_from_excel(excel_path)
+                        if items:
+                            return items
+
+        # Fallback to hardcoded list
+        return self.infer_compilation_pbc()
+
     def infer_compilation_pbc(self) -> list:
         """Return hard-coded compilation PBC items with status 'outstanding'.
 
         The compilation agent has no formal PBC system, so we infer required
-        documents from standard MPERS compilation requirements.
+        documents from standard MPERS compilation requirements. This is the
+        fallback when the compilation agent's ``/pbc`` skill has not been run.
 
         Returns:
             List of PBC item dicts.
@@ -276,11 +392,80 @@ class PBCConsolidator:
                 'category':      doc['category'],
                 'status':        'outstanding',
                 'date_received': '',
-                'remarks':       'Inferred from compilation requirements',
+                'remarks':       'Inferred from compilation requirements (agent /pbc not yet run)',
                 'source_ref':    '',
                 'priority':      doc.get('priority', 'medium'),
                 'source':        'compilation',
             })
+        return items
+
+    def _read_pbc_from_excel(self, excel_path: str) -> list:
+        """Read PBC items from a compilation agent Excel PBC file.
+
+        Expects a 'PBC Checklist' sheet with columns:
+        Ref, Category, Document, Priority, Status, Date Received, Remarks.
+
+        Args:
+            excel_path: Path to the Excel file.
+
+        Returns:
+            List of PBC item dicts, or empty list if parsing fails.
+        """
+        try:
+            from openpyxl import load_workbook
+        except ImportError:
+            return []
+
+        try:
+            wb = load_workbook(excel_path, read_only=True, data_only=True)
+        except Exception:
+            return []
+
+        # Look for PBC Checklist sheet
+        sheet_name = None
+        for name in wb.sheetnames:
+            if 'pbc' in name.lower() or 'checklist' in name.lower():
+                sheet_name = name
+                break
+        if not sheet_name:
+            wb.close()
+            return []
+
+        ws = wb[sheet_name]
+        items = []
+        headers = []
+        for row_idx, row in enumerate(ws.iter_rows(values_only=True), 1):
+            if row_idx == 1:
+                headers = [str(cell or '').strip().lower() for cell in row]
+                continue
+
+            if not any(row):
+                continue
+
+            row_dict = {}
+            for col_idx, header in enumerate(headers):
+                if col_idx < len(row):
+                    row_dict[header] = str(row[col_idx] or '').strip()
+                else:
+                    row_dict[header] = ''
+
+            doc_name = row_dict.get('document', '')
+            if not doc_name:
+                continue
+
+            status = self._parse_status(row_dict.get('status', 'outstanding'))
+            items.append({
+                'document':      doc_name,
+                'category':      row_dict.get('category', 'General'),
+                'status':        status,
+                'date_received': row_dict.get('date received', ''),
+                'remarks':       row_dict.get('remarks', ''),
+                'source_ref':    row_dict.get('ref', ''),
+                'priority':      row_dict.get('priority', 'medium').lower(),
+                'source':        'compilation',
+            })
+
+        wb.close()
         return items
 
     # ------------------------------------------------------------------
@@ -580,10 +765,16 @@ class PBCConsolidator:
                 full_path = os.path.join(agent_dir, client_folder)
                 tax_items = self.read_tax_pbc(full_path)
 
-        # Compilation — always uses inferred docs when enabled
+        # Compilation — try Excel PBC first, fall back to inferred docs
         compilation_cfg = self.services.get('compilation', {})
         if compilation_cfg.get('enabled'):
-            compilation_items = self.infer_compilation_pbc()
+            agent_dir = compilation_cfg.get('agent_dir', '')
+            client_folder = compilation_cfg.get('client_folder', '')
+            if agent_dir and client_folder:
+                full_path = os.path.join(agent_dir, client_folder)
+                compilation_items = self.read_compilation_pbc(full_path)
+            else:
+                compilation_items = self.infer_compilation_pbc()
 
         items = self.merge_pbc_items(audit_items, tax_items, compilation_items)
         stats = self.generate_summary_stats(items)
