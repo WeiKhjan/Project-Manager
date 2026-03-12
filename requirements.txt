@@ -1,4 +1,16 @@
+# Project Manager
 openpyxl
 google-auth
 google-auth-oauthlib
 google-api-python-client
+
+# Audit agent
+python-docx
+
+# Tax agent
+PyMuPDF
+markdown
+weasyprint
+
+# Compilation agent
+xlrd

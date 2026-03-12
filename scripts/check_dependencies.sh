@@ -67,6 +67,20 @@ if [ -n "$PYTHON_CMD" ]; then
     fi
 fi
 
+# --- Map pip package names to Python import names ---
+# Packages where pip name != import name
+get_import_name() {
+    case "$1" in
+        google-auth)                 echo "google.auth" ;;
+        google-auth-oauthlib)        echo "google_auth_oauthlib" ;;
+        google-api-python-client)    echo "googleapiclient" ;;
+        python-docx)                 echo "docx" ;;
+        PyMuPDF)                     echo "fitz" ;;
+        weasyprint)                  echo "weasyprint" ;;
+        *)                           echo "$1" | sed 's/-/_/g' ;;
+    esac
+}
+
 # --- Check required Python packages ---
 if [ -n "$PYTHON_CMD" ] && [ -n "${PIP_CMD:-}" ] && [ -f "$REQUIREMENTS_FILE" ]; then
     MISSING_PKGS=()
@@ -75,8 +89,8 @@ if [ -n "$PYTHON_CMD" ] && [ -n "${PIP_CMD:-}" ] && [ -f "$REQUIREMENTS_FILE" ];
         pkg=$(echo "$pkg" | sed 's/#.*//' | xargs)
         [ -z "$pkg" ] && continue
 
-        # Normalize: pip uses hyphens and underscores interchangeably
-        if ! $PYTHON_CMD -c "import importlib; importlib.import_module('$(echo "$pkg" | sed "s/-/_/g" | sed "s/google_api_python_client/googleapiclient/" | sed "s/google_auth_oauthlib/google_auth_oauthlib/" | sed "s/google_auth$/google.auth/")')" &>/dev/null; then
+        import_name=$(get_import_name "$pkg")
+        if ! $PYTHON_CMD -c "import importlib; importlib.import_module('$import_name')" &>/dev/null; then
             MISSING_PKGS+=("$pkg")
         fi
     done < "$REQUIREMENTS_FILE"

@@ -89,10 +89,23 @@ A **SessionStart hook** (`scripts/check_dependencies.sh`) automatically runs whe
 1. **Python 3** is installed and on PATH
 2. **pip** is available
 3. All packages in `requirements.txt` are installed (auto-installs if missing):
+
+   **Project Manager:**
    - `openpyxl` — Excel workbook generation
    - `google-auth` — Gmail OAuth2 authentication
    - `google-auth-oauthlib` — OAuth2 flow
    - `google-api-python-client` — Gmail API client
+
+   **Audit Agent:**
+   - `python-docx` — Word document generation (audit templates)
+
+   **Tax Agent:**
+   - `PyMuPDF` — PDF annotation and GL markup (imported as `fitz`)
+   - `markdown` — Markdown-to-HTML conversion for PDF export
+   - `weasyprint` — HTML/CSS-to-PDF conversion
+
+   **Compilation Agent:**
+   - `xlrd` — Legacy Excel (.xls) file reading
 
 After the first successful check, a `.deps_verified` marker is written. The check re-runs automatically every **7 days** or if the marker is deleted. To force a re-check, delete `.deps_verified` from the project root.
 
