@@ -82,6 +82,20 @@ This agent operates as the **Team Lead** in Claude Code's Agent Teams framework.
 - Recommended: Use **tmux** or **iTerm2** for split-pane mode (see all teammates working simultaneously)
 - Use **Delegate Mode** (Shift+Tab) to prevent the Lead from doing implementation work
 
+### First-Run Dependency Check
+
+A **SessionStart hook** (`scripts/check_dependencies.sh`) automatically runs when Claude Code opens this project. It verifies:
+
+1. **Python 3** is installed and on PATH
+2. **pip** is available
+3. All packages in `requirements.txt` are installed (auto-installs if missing):
+   - `openpyxl` — Excel workbook generation
+   - `google-auth` — Gmail OAuth2 authentication
+   - `google-auth-oauthlib` — OAuth2 flow
+   - `google-api-python-client` — Gmail API client
+
+After the first successful check, a `.deps_verified` marker is written. The check re-runs automatically every **7 days** or if the marker is deleted. To force a re-check, delete `.deps_verified` from the project root.
+
 ### Spawning Teammates
 
 When the user requests audit, tax, or compilation work, spawn teammates into their respective project directories. Each teammate automatically reads that project's CLAUDE.md and gains access to its skills.
